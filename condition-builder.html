@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Bedingungsprüfung</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f4f7fb;
+      padding: 2rem;
+      color: #333;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      margin-bottom: 2rem;
+    }
+
+    h2, h3 {
+      text-align: center;
+    }
+
+    label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: 600;
+    }
+
+    select, input, button {
+      padding: 0.6rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    input, select {
+      width: 100%;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-row > *:not(button) {
+      flex: 1;
+    }
+
+    button {
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+
+    button:hover {
+      background-color: #004999;
+    }
+
+    .generate-button {
+      background-color: #28a745 !important;
+      font-size: 1.2rem;
+      padding: 1rem;
+      font-weight: bold;
+    }
+
+    .copy-button {
+      background-color: #ffc107 !important;
+      margin-top: 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: black;
+    }
+
+    .reset-button {
+      background-color: #ccc !important;
+      color: black;
+      font-weight: 600;
+      margin-top: 1rem;
+    }
+
+    .output, .check-result {
+      margin-top: 0.5rem;
+      background: #fff8c4;
+      border: 2px solid #f2d024;
+      padding: 1rem;
+      border-radius: 10px;
+      font-family: monospace;
+      font-size: 1.1rem;
+      white-space: pre-wrap;
+    }
+
+    .error-output {
+      color: red;
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+
+    .condition-block {
+      background: #f0f4ff;
+      border: 1px solid #ccdfff;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .true { color: green; font-weight: bold; }
+    .false { color: red; font-weight: bold; }
+
+    .remove-button {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      padding: 0.4rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    .remove-button:hover {
+      background-color: #c0392b;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>🔧 Bedingungen erstellen</h2>
+
+    <div id="conditionsContainer"></div>
+    <button onclick="addCondition()">➕ Bedingung hinzufügen</button>
+    <button onclick="generateConditions()" class="generate-button">✅ Bedingungen generieren</button>
+    <button onclick="resetAll()" class="reset-button">🔄 Alles zurücksetzen</button>
+
+    <div style="font-weight: bold; margin-top: 1.5rem;">📝 Ausgabe (nicht Teil der Zwischenablage):</div>
+    <div class="output" id="output"></div>
+    <div id="errorOutput" class="error-output"></div>
+    <button onclick="copyOutput()" id="copyButton" class="copy-button" style="display:none;">📋 In Zwischenablage kopieren</button>
+    <div id="copyFeedback" style="text-align:center; font-weight:bold; margin-top:0.5rem;"></div>
+  </div>
+
+  <div class="container">
+    <h3>🧪 Prüf-Funktion</h3>
+
+    <label>Anschlussleistung (ConnectionPower):</label>
+    <input type="number" id="ConnectionPower">
+
+    <label>Wärmelieferleistung (HeatDeliveryPower):</label>
+    <input type="number" id="HeatDeliveryPower">
+
+    <label>Wärmeverbrauch (Consumption):</label>
+    <input type="number" id="Consumption">
+
+    <button onclick="checkConditions()">✅ Prüfen</button>
+    <div class="check-result" id="checkResult"></div>
+  </div>
+
+  <script>
+    let conditionIndex = 1;
+
+    function addCondition() {
+      const container = document.getElementById('conditionsContainer');
+      const div = document.createElement('div');
+      div.className = 'condition-block';
+      div.innerHTML = `
+        <div class="form-row">
+          <label style="flex:0 0 120px;">Bedingung ${conditionIndex}</label>
+          <button class="remove-button" onclick="this.closest('.condition-block').remove()">❌ Entfernen</button>
+        </div>
+        <div class="form-row">
+          <select class="field">
+            <option value="ConnectionPower">Anschlussleistung</option>
+            <option value="HeatDeliveryPower">Wärmelieferleistung</option>
+            <option value="Consumption">Wärmeverbrauch</option>
+          </select>
+          <select class="operator">
+            <option value=">">&gt;</option>
+            <option value=">=">&gt;=</option>
+            <option value="<">&lt;</option>
+            <option value="<=">&lt;=</option>
+            <option value="==">=</option>
+          </select>
+          <input type="number" class="value" placeholder="Wert eingeben">
+        </div>
+      `;
+      container.appendChild(div);
+      conditionIndex++;
+    }
+
+    function generateConditions() {
+      const blocks = document.querySelectorAll('.condition-block');
+      const output = document.getElementById('output');
+      const errorOutput = document.getElementById('errorOutput');
+      const copyButton = document.getElementById('copyButton');
+      const feedback = document.getElementById('copyFeedback');
+
+      let results = [];
+      let parsed = {};
+      let hasError = false;
+      let errors = [];
+
+      blocks.forEach((block, i) => {
+        const field = block.querySelector('.field').value;
+        const op = block.querySelector('.operator').value;
+        const valueStr = block.querySelector('.value').value;
+        const value = parseFloat(valueStr);
+
+        if (isNaN(value)) return;
+
+        if (value < 0 || (['<', '<=', '==', '>=', '>'].includes(op) && value < 0)) {
+          hasError = true;
+          errors.push(`❌ Bedingung ${i + 1}: Negative Werte sind nicht erlaubt – auch nicht in Kombination mit Operator.`);
+          return;
+        }
+
+        if (!parsed[field]) parsed[field] = [];
+        parsed[field].push({ op, value, index: i + 1 });
+
+        results.push(`{${field}} ${op} ${value}`);
+      });
+
+      for (let field in parsed) {
+        const checks = parsed[field];
+        let min = -Infinity;
+        let max = Infinity;
+
+        for (let cond of checks) {
+          const v = cond.value;
+          if (cond.op === '>' || cond.op === '>=') {
+            const val = cond.op === '>' ? v + Number.EPSILON : v;
+            min = Math.max(min, val);
+          } else if (cond.op === '<' || cond.op === '<=') {
+            const val = cond.op === '<' ? v - Number.EPSILON : v;
+            max = Math.min(max, val);
+          } else if (cond.op === '==') {
+            min = Math.max(min, v);
+            max = Math.min(max, v);
+          }
+        }
+
+        if (min > max) {
+          hasError = true;
+          errors.push(`❌ Widersprüchliche Bedingungen für ${field}.`);
+        }
+      }
+
+      if (hasError) {
+        output.textContent = '';
+        errorOutput.innerHTML = errors.join('<br>');
+        copyButton.style.display = 'none';
+        feedback.textContent = '';
+        return;
+      }
+
+      const resultString = results.join(' && ');
+      output.textContent = resultString;
+      errorOutput.innerHTML = '';
+      copyButton.style.display = resultString.trim() ? 'block' : 'none';
+      feedback.textContent = '';
+    }
+
+    function copyOutput() {
+      const output = document.getElementById('output').textContent;
+      const feedback = document.getElementById('copyFeedback');
+
+      navigator.clipboard.writeText(output)
+        .then(() => {
+          feedback.innerHTML = '✔️ Kopiert!';
+        })
+        .catch(() => {
+          feedback.innerHTML = '❌ Kopieren fehlgeschlagen.';
+        });
+    }
+
+    function checkConditions() {
+      const values = {
+        ConnectionPower: parseFloat(document.getElementById('ConnectionPower').value),
+        HeatDeliveryPower: parseFloat(document.getElementById('HeatDeliveryPower').value),
+        Consumption: parseFloat(document.getElementById('Consumption').value),
+      };
+
+      const blocks = document.querySelectorAll('.condition-block');
+      let passed = true;
+      let failMessage = '';
+
+      blocks.forEach((block, i) => {
+        const field = block.querySelector('.field').value;
+        const op = block.querySelector('.operator').value;
+        const compareTo = parseFloat(block.querySelector('.value').value);
+        const val = values[field];
+        let result = false;
+
+        if (isNaN(val)) {
+          passed = false;
+          failMessage = `❌ Kein gültiger Eingabewert für ${field}`;
+          return;
+        }
+
+        switch (op) {
+          case '>': result = val > compareTo; break;
+          case '>=': result = val >= compareTo; break;
+          case '<': result = val < compareTo; break;
+          case '<=': result = val <= compareTo; break;
+          case '==': result = val == compareTo; break;
+        }
+
+        if (!result) {
+          passed = false;
+          failMessage = `❌ Bedingung ${i + 1} nicht erfüllt: {${field}} ${op} ${compareTo}, aber Wert ist ${val}`;
+        }
+      });
+
+      const resultDiv = document.getElementById('checkResult');
+      resultDiv.innerHTML = passed
+        ? `<span class="true">✅ WAHR – Alle Bedingungen erfüllt.</span>`
+        : `<span class="false">${failMessage}</span>`;
+    }
+
+    function resetAll() {
+      document.getElementById('conditionsContainer').innerHTML = '';
+      conditionIndex = 1;
+      document.getElementById('output').textContent = '';
+      document.getElementById('errorOutput').textContent = '';
+      document.getElementById('copyButton').style.display = 'none';
+      document.getElementById('copyFeedback').textContent = '';
+      document.getElementById('ConnectionPower').value = '';
+      document.getElementById('HeatDeliveryPower').value = '';
+      document.getElementById('Consumption').value = '';
+      document.getElementById('checkResult').innerHTML = '';
+    }
+  </script>
+
+</body>
+</html>
